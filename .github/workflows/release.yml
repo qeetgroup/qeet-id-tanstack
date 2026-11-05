@@ -1,0 +1,105 @@
+name: Release
+
+# Run by hand from main (Actions > Release > Run workflow), choosing the part of
+# the version to bump. Merging into main never publishes by itself: the version
+# is decided when a release is run, not by whichever merge came last.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Which version part to increment
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # push the version bump + tag after a successful publish
+  id-token: write # npm provenance attestation
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Releases are cut from main only.
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://www.npmjs.com/package/@qeet-id/tanstack
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history to find the latest tag
+
+      - name: Determine next version
+        id: version
+        env:
+          # `type: choice` constrains this server-side, but keep it out of the
+          # script body anyway so the run block never interpolates input.
+          BUMP: ${{ inputs.bump || 'patch' }}
+        run: |
+          latest=$(git tag --list 'v*' --sort=-version:refname | head -1)
+          latest=${latest:-v0.0.0}
+          IFS='.' read -r major minor patch <<< "${latest#v}"
+          case "$BUMP" in
+            major) new_tag="v$((major + 1)).0.0" ;;
+            minor) new_tag="v${major}.$((minor + 1)).0" ;;
+            *)     new_tag="v${major}.${minor}.$((patch + 1))" ;;
+          esac
+          echo "Latest: $latest  ->  new: $new_tag"
+          echo "tag=$new_tag" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # npm publishes (bun publish can't attest provenance).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      # Until @qeet-id/node and @qeet-id/react are on npm (see AGENTS.md).
+      - uses: ./.github/actions/link-qeet-id-packages
+
+      - run: bun install --frozen-lockfile
+
+      # npm publishes the version in package.json, not the git tag, so the two
+      # have to agree. Bump before the gate so the built artifact carries the
+      # right version; the change is only committed once the publish succeeds.
+      - name: Set package version
+        env:
+          VERSION: ${{ steps.version.outputs.tag }}
+        run: npm version "${VERSION#v}" --no-git-tag-version --allow-same-version
+
+      - run: bun run typecheck
+      - run: bun run check
+      - run: bun run test
+      - run: bun run build
+      - run: bun run check:package
+
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Commit + tag AFTER a successful publish so every tag == a version that
+      # is actually live on npm. This push uses GITHUB_TOKEN, which by design
+      # does not re-trigger workflows — so it cannot loop back into this job.
+      - name: Commit version bump, tag and create GitHub release
+        env:
+          VERSION: ${{ steps.version.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(release): $VERSION [skip ci]"
+          git tag "$VERSION"
+          git push origin HEAD:main --follow-tags
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --generate-notes \
+            --repo "${{ github.repository }}"

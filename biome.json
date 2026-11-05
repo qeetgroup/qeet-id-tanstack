@@ -51,6 +51,6 @@
     }
   ],
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/dist", "!**/coverage", "!bun.lock", "!**/*.md", "!**/*.yml", "!**/*.yaml"]
+    "includes": ["**", "!**/node_modules", "!**/dist", "!**/.deps", "!**/coverage", "!bun.lock", "!**/*.md", "!**/*.yml", "!**/*.yaml"]
   }
 }

@@ -23,3 +23,6 @@ coverage/
 .vscode/*
 !.vscode/extensions.json
 *.log
+
+# Unpublished Qeet ID packages built by CI
+.deps/
