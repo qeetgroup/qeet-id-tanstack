@@ -65,6 +65,20 @@ describe("reading the session in a request", () => {
     expect(start.headers).toEqual([["set:Cache-Control", "no-store"]]);
   });
 
+  it("doesn't read the session on the session routes, which set their own cookies", async () => {
+    const { jar, signIn, advance, mock } = await setup();
+    await signIn();
+    advance(9.5 * 60 * 1000);
+    for (const path of ["/auth/sign-out", "/auth"]) {
+      start.request = jar.request(path, { method: "POST" });
+      expect(await bodies.readSession()).toBeNull();
+    }
+    expect(start.headers).toEqual([]);
+    expect(mock.callsTo("/v1/oauth/token-code")).toHaveLength(1);
+    start.request = jar.request("/authors");
+    expect((await bodies.readSession())?.user.id).toBe(PERSON.sub);
+  });
+
   it("answers the session, and sets a renewed cookie on the response once", async () => {
     const { jar, signIn, advance } = await setup();
     await signIn();

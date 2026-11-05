@@ -12,6 +12,9 @@ import { NotSignedInError } from "../core/errors.js";
 import { handleAuthRequest } from "../core/routes.js";
 import { getQeetIDAuth } from "./runtime.js";
 
+/** What middleware sees on a session route. */
+const NOT_READ: LoadedSession = Object.freeze({ session: null, tokens: null, cookies: Object.freeze([]) });
+
 /** Requests whose response already carries the session's cookies. */
 const applied = new WeakSet<Request>();
 
@@ -22,7 +25,10 @@ const applied = new WeakSet<Request>();
  */
 export async function loadCurrentSession(): Promise<LoadedSession> {
   const request = getRequest();
-  const loaded = await getQeetIDAuth().loadSession(request);
+  const auth = getQeetIDAuth();
+  // The session routes manage the cookies themselves: a renewal here could undo a sign-out's.
+  if (auth.isSessionRoute(request)) return NOT_READ;
+  const loaded = await auth.loadSession(request);
   if (!applied.has(request)) {
     applied.add(request);
     setResponseHeader("Cache-Control", "no-store");

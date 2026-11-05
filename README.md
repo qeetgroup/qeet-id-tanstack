@@ -9,7 +9,7 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](#-install)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)](#-typescript-and-modules)
 [![OpenID Connect](https://img.shields.io/badge/OpenID%20Connect-code%20%2B%20PKCE-F78C40?logo=openid&logoColor=white)](#-how-sign-in-works)
-[![Tests](https://img.shields.io/badge/tests-137%20passing-2EA043)](test)
+[![Tests](https://img.shields.io/badge/tests-140%20passing-2EA043)](test)
 
 [🌐 Qeet ID](https://id.qeet.in) · [📖 Docs](https://docs.qeet.in) · [🚀 Quick start](#-quick-start) · [⚛️ React SDK](https://github.com/qeetgroup/qeet-id-react) · [🟢 Node SDK](https://github.com/qeetgroup/qeet-id-node) · [📝 Changelog](CHANGELOG.md)
 
