@@ -1,0 +1,90 @@
+# qeet-id-tanstack — repository context metadata (Level 2).
+# Inherits qeetgroup/qeet-context (L0) and qeetgroup/qeet-id-context (L1).
+
+schema_version: 1
+
+context: {type: repository, level: L2, canonical: true, last_verified: "2026-11-05"}
+
+inheritance:
+  organization: {repository: qeetgroup/qeet-context, level: L0}
+  product:      {repository: qeetgroup/qeet-id-context, level: L1}
+
+repository:
+  name: qeet-id-tanstack
+  product: qeet-id
+  type: sdk
+  role: sdk
+  status: development
+  visibility: public
+  default_branch: main
+
+runtime:
+  language: TypeScript
+  typescript: "7"
+  node: ">=22.12.0"          # tested on 22, 24 and 26; .nvmrc pins 24
+  package_manager: bun@1.4.3
+  lint_format: biome
+  runtime_deps: none         # Web Crypto and fetch; the peers below
+  peers: ["@qeet-id/node", "@qeet-id/react", "@tanstack/react-start ^1.169", "@tanstack/react-router ^1.170", "react ^19"]
+  build: tsdown              # ES modules only (.mjs/.d.mts), one file per module
+
+module: {name: "@qeet-id/tanstack", version: "0.1.0", entries: ["@qeet-id/tanstack", "@qeet-id/tanstack/server"]}
+
+architecture:
+  pattern: backend-for-frontend        # RFC 10017 §6.1
+  core: src/core                       # framework-free: Request in, cookies/locations/Response out
+  adapter: src/tanstack                # server functions, middleware, guard, provider, server helpers
+  session: sealed-cookie               # ADR-0001 — JWE dir/A256GCM, HKDF keys, rotation
+  routes: catch-all-server-route       # ADR-0002 — authRouteHandlers at {base}/$
+  renewal: once-per-refresh-token      # ADR-0003
+  organisation_switch: "501"           # ADR-0004
+
+contracts:
+  implements:
+    contract: session-contract
+    owner: qeet-id-react
+    documents: [docs/session-contract.md, src/contract.ts]
+  consumes:
+    api: qeet-id-server
+    documents: [api/openapi/federation.yaml, api/openapi/management.yaml, api/openapi/auth.yaml]
+    through: "@qeet-id/node"
+    base_url: https://api.id.qeet.in
+  oauth_client_auth: client_secret_post
+
+defaults:
+  base_path: /auth
+  scopes: "openid email profile"
+  session_max_age_seconds: 2592000
+  renew_before_ms: 60000
+  refresh_reuse_ms: 60000
+  directory_ttl_ms: 300000
+  sign_in_ttl_seconds: 600
+  cookies: ["__Host-qeet-id-session", "__Host-qeet-id-signin.<state>"]
+
+commands:
+  install: bun install       # after building and linking @qeet-id/node and @qeet-id/react (AGENTS.md)
+  check:   bun run verify    # typecheck + biome + test + build + publint + attw — the gate
+  build:   bun run build
+  test:    bun run test
+
+ci:
+  workflows: [ci.yml, codeql.yml, lint.yml, release.yml, security.yml]
+  matrix: ["22", "24", "26"]
+  release: run by hand on main (patch|minor|major) -> bump package.json -> gate -> npm publish --provenance -> tag vX.Y.Z
+
+security:
+  sensitive_paths:
+    - src/core/crypto.ts      # cookie sealing, keys, rotation
+    - src/core/auth.ts        # state, iss, PKCE, ID token, renewal, sign-out
+    - src/core/routes.ts      # CSRF, return paths, no-store
+    - src/tanstack/           # what reaches the browser bundle
+  never: [send a token to the browser, refresh outside OidcClient.renew, log a credential, import server modules into the browser entry]
+
+llm_context:
+  primary_instructions: AGENTS.md
+  canonical: docs/llm/context.md
+  boundaries: docs/llm/boundaries.md
+  workflows: docs/llm/workflows.md
+  architecture_map: docs/llm/architecture-map.md
+  practices: docs/engineering-practices.md
+  adapters: [CLAUDE.md, GEMINI.md, .github/copilot-instructions.md]
