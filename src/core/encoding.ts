@@ -63,3 +63,14 @@ export function decodeJwtPayload(token: string): Record<string, unknown> | undef
     return undefined;
   }
 }
+
+/**
+ * Removes the trailing slashes from a URL or path, in linear time. It replaces
+ * `value.replace(/\/+$/, "")`, whose backtracking turns quadratic on a string
+ * of many slashes that don't end it (a slow-regex denial of service).
+ */
+export function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end--;
+  return end === value.length ? value : value.slice(0, end);
+}

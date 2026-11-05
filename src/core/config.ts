@@ -4,6 +4,7 @@
  */
 
 import { DEFAULT_BASE_PATH, type SessionRoutes, sessionRoutes } from "../contract.js";
+import { trimTrailingSlashes } from "./encoding.js";
 import { ConfigurationError } from "./errors.js";
 
 /** The production Qeet ID API. */
@@ -87,7 +88,7 @@ export function loadConfig(env: QeetIDEnv = processEnv()): QeetIDConfig {
     return raw ?? "";
   };
 
-  const baseUrl = checkedUrl(value(ENV.baseUrl) ?? DEFAULT_BASE_URL, ENV.baseUrl, problems, { allowQuery: false }).replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(checkedUrl(value(ENV.baseUrl) ?? DEFAULT_BASE_URL, ENV.baseUrl, problems, { allowQuery: false }));
 
   const clientId = required(ENV.clientId, "the client id of your Qeet ID application");
   const clientSecret = required(ENV.clientSecret, "the client secret of your Qeet ID application (a confidential web application)");
@@ -98,7 +99,7 @@ export function loadConfig(env: QeetIDEnv = processEnv()): QeetIDConfig {
   if (configuredBasePath !== undefined) {
     try {
       routes = sessionRoutes(configuredBasePath);
-      basePath = configuredBasePath.replace(/\/+$/, "");
+      basePath = trimTrailingSlashes(configuredBasePath);
     } catch {
       problems.push(`${ENV.basePath} must be a path on this site, such as ${DEFAULT_BASE_PATH}.`);
     }

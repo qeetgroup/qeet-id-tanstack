@@ -17,6 +17,7 @@
 
 import { CSRF_HEADER, CSRF_HEADER_VALUE, type SessionErrorCode, type SessionRoutes } from "../contract.js";
 import type { AuthRedirect, QeetIDAuth } from "./auth.js";
+import { trimTrailingSlashes } from "./encoding.js";
 import { SessionUnavailableError } from "./errors.js";
 
 type RouteName = keyof SessionRoutes;
@@ -83,7 +84,7 @@ export async function handleAuthRequest(auth: QeetIDAuth, request: Request): Pro
 
 /** The session route `pathname` names, or `undefined`. */
 function routeOf(pathname: string, routes: SessionRoutes): RouteName | undefined {
-  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  const path = pathname.length > 1 ? trimTrailingSlashes(pathname) : pathname;
   return (Object.keys(routes) as RouteName[]).find((name) => routes[name] === path);
 }
 
