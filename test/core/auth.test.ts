@@ -175,8 +175,17 @@ describe("signing in", () => {
     const state = new URL(start.location).searchParams.get("state");
     const denied = await auth.finishSignIn(jar.request(`/auth/callback?error=access_denied&state=${state}&iss=${ISSUER}`));
     expect(denied.location).toBe("/invoices?status=due&authError=access_denied");
-    const odd = await auth.finishSignIn(jar.request(`/auth/callback?error=%3Cscript%3E&state=${state}`));
+    const odd = await auth.finishSignIn(jar.request(`/auth/callback?error=%3Cscript%3E&state=${state}&iss=${ISSUER}`));
     expect(odd.location).toBe("/invoices?status=due&authError=server_error");
+  });
+
+  it("checks the issuer of an error answer too (RFC 9207 §2.4)", async () => {
+    const { auth, jar } = await setup();
+    const start = await auth.startSignIn("/invoices");
+    jar.apply(start.cookies);
+    const state = new URL(start.location).searchParams.get("state");
+    const forged = await auth.finishSignIn(jar.request(`/auth/callback?error=access_denied&state=${state}&iss=https%3A%2F%2Fevil.example`));
+    expect(forged.location).toBe("/invoices?authError=invalid_state");
   });
 
   it("refuses an answer from another issuer (RFC 9207)", async () => {
@@ -379,6 +388,22 @@ describe("the session", () => {
     expect((await auth.loadSession(jar.request("/"))).session).not.toBeNull();
     advance(MINUTE);
     expect((await auth.loadSession(jar.request("/"))).session).toBeNull();
+  });
+
+  it("never keeps a spent refresh token: a renewal without a new one ends with the access token", async () => {
+    const { auth, jar, signIn, advance, mock } = await setup();
+    await signIn();
+    advance(9.5 * 60 * 1000);
+    mock.state.refreshTokens = false;
+    const renewed = await auth.loadSession(jar.request("/"));
+    jar.apply(renewed.cookies);
+    expect(Date.parse(renewed.session!.expiresAt)).toBeLessThanOrEqual(Date.now() + 9.5 * MINUTE + 10 * MINUTE);
+    advance(9.5 * MINUTE);
+    expect((await auth.loadSession(jar.request("/"))).session).not.toBeNull();
+    advance(MINUTE);
+    expect((await auth.loadSession(jar.request("/"))).session).toBeNull();
+    // The spent refresh token was never sent again.
+    expect(mock.callsTo("/v1/oauth/token-code")).toHaveLength(2);
   });
 
   it("ends after QEET_ID_SESSION_MAX_AGE without a renewal", async () => {

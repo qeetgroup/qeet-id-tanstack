@@ -149,14 +149,13 @@ export class QeetIDAuth {
     });
     if (transaction.expiresAt <= this.#now()) return fail("invalid_state");
 
-    const error = params.get("error");
-    if (error !== null) return fail((/^[a-z_]{1,64}$/.test(error) ? error : "server_error") as SignInErrorCode);
-
     let tokens: TokenResponse;
     let claims: IdTokenClaims;
     try {
-      // RFC 9207: the answer must come from the issuer this sign-in went to.
+      // RFC 9207 §2.4: every answer, an error included, must come from the issuer this sign-in went to.
       if (params.get("iss") !== (await this.oidc.issuer())) return fail("invalid_state");
+      const error = params.get("error");
+      if (error !== null) return fail((/^[a-z_]{1,64}$/.test(error) ? error : "server_error") as SignInErrorCode);
       const code = params.get("code");
       if (code === null || code === "") return fail("invalid_state");
       tokens = await this.oidc.exchangeCode(code, transaction.codeVerifier);
@@ -207,6 +206,12 @@ export class QeetIDAuth {
       this.#loaded.set(request, loaded);
     }
     return loaded;
+  }
+
+  /** Whether `request` is for one of the session routes, which set their own cookies. */
+  isSessionRoute(request: Request): boolean {
+    const { pathname } = new URL(request.url);
+    return pathname === this.config.basePath || pathname.startsWith(`${this.config.basePath}/`);
   }
 
   /**
@@ -319,7 +324,8 @@ export class QeetIDAuth {
         idToken,
         accessToken: tokens.access_token,
         accessTokenExpiresAt: now + tokens.expires_in * 1000,
-        refreshToken: tokens.refresh_token ?? current.refreshToken,
+        // Qeet ID rotates refresh tokens: the old one is spent, so never keep it.
+        refreshToken: tokens.refresh_token ?? null,
       },
       now,
     );
