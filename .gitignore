@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.next/
+.output/
+.vinxi/
+.tanstack/
+*.tsbuildinfo
+
+# Tests
+coverage/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
