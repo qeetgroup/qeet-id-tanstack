@@ -65,7 +65,6 @@ TanStack layer with Start's request helpers mocked. No test calls a real server.
 
 ## Known constraints
 
-- `@qeet-id/node` and `@qeet-id/react` aren't on npm yet: linked for development (AGENTS.md).
 - Renewals are shared per process (ADR-0003).
 - Back-channel logout isn't received: a cookie session has no server-side store to end. A Qeet ID sign-out
   revokes the grant, so the session ends at its next renewal.

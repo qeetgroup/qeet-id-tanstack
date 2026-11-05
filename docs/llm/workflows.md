@@ -6,7 +6,6 @@
 ## Set up
 
 ```bash
-# Until @qeet-id/node and @qeet-id/react are on npm: build and `bun link` them first (AGENTS.md).
 bun install
 bun run verify   # typecheck + Biome + tests + build + publint + attw
 ```
@@ -17,7 +16,7 @@ No services required — tests use `test/helpers/qeet-id.ts`.
 
 ```text
 1  read the change in qeet-id-react's docs/session-contract.md and src/contract.ts
-2  rebuild and relink @qeet-id/react
+2  raise @qeet-id/react to the version with the change
 3  src/contract.ts      re-export any new name
 4  src/core/routes.ts   the route, status and error code, exactly as the contract says
 5  src/core/auth.ts     if the session's fields or the flow changed
@@ -67,9 +66,6 @@ A push to `main` whose version is already on npm releases nothing, so re-running
 is not unpublished: run `rollback.yml` to point `latest` back at a good version, then release a fix.
 `scripts/npm-versions.mjs` knows every version npm has ever accepted, including unpublished ones, so a
 version number is never reused.
-
-While `package.json` still links `@qeet-id/node` and `@qeet-id/react` (`"link:@qeet-id/…"`),
-`release.yml` waits and publishes nothing: point them at their published versions first.
 
 `VERSION` is written in from package.json at build time.
 

@@ -72,23 +72,6 @@ bun run check:package   # publint --strict && attw --pack . --profile esm-only
 Also `bun run dev`, `bun run test:watch`, `bun run test:coverage`, `bun run lint`, `bun run lint:fix`,
 `bun run format`.
 
-### The unpublished Qeet ID packages
-
-`@qeet-id/node` and `@qeet-id/react` are linked for development until they are published
-(`"link:@qeet-id/node"` in devDependencies; optional in `peerDependenciesMeta` so bun doesn't look for them on
-npm). Before `bun install`, build and register each:
-
-```bash
-git clone --branch develop https://github.com/qeetgroup/qeet-id-node ../qeet-id-node
-(cd ../qeet-id-node && bun install && bun run build && bun link)
-# The branch holding the session contract: feat/sdk-1.0 today, develop once it is merged.
-git clone --branch feat/sdk-1.0 https://github.com/qeetgroup/qeet-id-react ../qeet-id-react
-(cd ../qeet-id-react && bun install && bun run build && bun link)
-```
-
-Once both are on npm: replace the `link:` devDependencies with their versions, drop `peerDependenciesMeta`,
-and remove the matching steps from the workflows.
-
 ## What CI enforces
 
 `ci.yml` on Node.js 22, 24 and 26: install, typecheck, build, tests with coverage, package checks.

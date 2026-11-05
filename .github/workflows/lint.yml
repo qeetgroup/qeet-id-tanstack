@@ -21,9 +21,6 @@ jobs:
         with:
           bun-version-file: package.json
 
-      # Until @qeet-id/node and @qeet-id/react are on npm (see AGENTS.md).
-      - uses: ./.github/actions/link-qeet-id-packages
-
       - run: bun install --frozen-lockfile
 
       # Lint and formatting in one pass (biome.json).
