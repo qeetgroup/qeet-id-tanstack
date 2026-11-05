@@ -14,7 +14,7 @@ repository:
   product: qeet-id
   type: sdk
   role: sdk
-  status: development
+  status: active
   visibility: public
   default_branch: main
 
@@ -62,7 +62,7 @@ defaults:
   cookies: ["__Host-qeet-id-session", "__Host-qeet-id-signin.<state>"]
 
 commands:
-  install: bun install       # after building and linking @qeet-id/node and @qeet-id/react (AGENTS.md)
+  install: bun install
   check:   bun run verify    # typecheck + biome + test + build + publint + attw — the gate
   build:   bun run build
   test:    bun run test
@@ -70,7 +70,7 @@ commands:
 ci:
   workflows: [ci.yml, codeql.yml, lint.yml, release.yml, rollback.yml, security.yml, version.yml]
   matrix: ["22", "24", "26"]
-  release: PR into main -> version.yml bumps the package.json patch; push main -> wait while linked -> version not on npm -> gate -> npm publish --provenance -> tag vX.Y.Z + GitHub release
+  release: PR into main -> version.yml bumps the package.json patch; push main -> version not on npm -> gate -> npm publish --provenance -> tag vX.Y.Z + GitHub release
 
 security:
   sensitive_paths:

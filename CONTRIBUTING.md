@@ -5,7 +5,6 @@
 ```bash
 git clone https://github.com/qeetgroup/qeet-id-tanstack
 cd qeet-id-tanstack
-# Until @qeet-id/node and @qeet-id/react are on npm, build and link them first: see AGENTS.md.
 bun install
 bun run verify   # typecheck + Biome + tests + build + publint + attw
 ```

@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-11-05
+
 ### Added
 
 - **The session routes**, from one catch-all server route (`authRouteHandlers`): `GET {base}/sign-in` and
@@ -45,3 +47,6 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Switching organisation answers `501 organization_switch_unavailable` for any organisation but the
   current one, and `organization` and `loginHint` on sign-in are accepted but not passed on: Qeet ID's
   authorization endpoint takes neither, and an application's sign-in is always for its own organisation.
+
+[Unreleased]: https://github.com/qeetgroup/qeet-id-tanstack/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/qeetgroup/qeet-id-tanstack/releases/tag/v0.1.0
