@@ -1,105 +1,151 @@
 name: Release
 
-# Run by hand from main (Actions > Release > Run workflow), choosing the part of
-# the version to bump. Merging into main never publishes by itself: the version
-# is decided when a release is run, not by whichever merge came last.
+# Publishes @qeet-id/tanstack to npm on merge to main, then tags the commit — the same release flow as the
+# Qeetrix packages.
+#
+#   1. Open a PR into main. version.yml bumps the patch on the PR branch; raise minor or major by hand.
+#   2. Merge to main. The gate job runs every check again.
+#   3. The publish job runs in the `npm-publish` environment (give it required reviewers to approve
+#      each release). It publishes to npm, pushes the vX.Y.Z tag and opens a GitHub Release.
+#   4. Bad release? Run rollback.yml: it moves `latest` back. npm never republishes a version.
+#
+# Re-running is safe: if the version is already on the registry, nothing is published.
+
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      bump:
-        description: Which version part to increment
-        type: choice
-        options: [patch, minor, major]
-        default: patch
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 permissions:
-  contents: write # push the version bump + tag after a successful publish
-  id-token: write # npm provenance attestation
+  contents: read
 
 jobs:
-  release:
+  gate:
     runs-on: ubuntu-latest
-    # Releases are cut from main only.
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: production
-      url: https://www.npmjs.com/package/@qeet-id/tanstack
+    timeout-minutes: 20
+    outputs:
+      release: ${{ steps.version.outputs.release }}
+      version: ${{ steps.version.outputs.version }}
+      name: ${{ steps.version.outputs.name }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # full history to find the latest tag
-
-      - name: Determine next version
-        id: version
-        env:
-          # `type: choice` constrains this server-side, but keep it out of the
-          # script body anyway so the run block never interpolates input.
-          BUMP: ${{ inputs.bump || 'patch' }}
-        run: |
-          latest=$(git tag --list 'v*' --sort=-version:refname | head -1)
-          latest=${latest:-v0.0.0}
-          IFS='.' read -r major minor patch <<< "${latest#v}"
-          case "$BUMP" in
-            major) new_tag="v$((major + 1)).0.0" ;;
-            minor) new_tag="v${major}.$((minor + 1)).0" ;;
-            *)     new_tag="v${major}.${minor}.$((patch + 1))" ;;
-          esac
-          echo "Latest: $latest  ->  new: $new_tag"
-          echo "tag=$new_tag" >> "$GITHUB_OUTPUT"
-
-      - uses: oven-sh/setup-bun@v2
+          fetch-depth: 0 # tags must be visible
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
-
-      # npm publishes (bun publish can't attest provenance).
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24"
-          registry-url: "https://registry.npmjs.org"
+          node-version: 24
 
-      # Until @qeet-id/node and @qeet-id/react are on npm (see AGENTS.md).
-      - uses: ./.github/actions/link-qeet-id-packages
+      - id: version
+        name: is there anything to release?
+        run: |
+          set -uo pipefail
+          version=$(node -p "require('./package.json').version")
+          name=$(node -p "require('./package.json').name")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "name=$name"       >> "$GITHUB_OUTPUT"
 
-      - run: bun install --frozen-lockfile
+          # A published package can't depend on packages that aren't: @qeet-id/node and
+          # @qeet-id/react are linked from their repositories until they are on npm.
+          if grep -q '"link:@qeet-id/' package.json; then
+            echo "::notice::package.json still links @qeet-id/node and @qeet-id/react. Publish them, point this package at their published versions, then merge again."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "waiting=true"  >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-      # npm publishes the version in package.json, not the git tag, so the two
-      # have to agree. Bump before the gate so the built artifact carries the
-      # right version; the change is only committed once the publish succeeds.
-      - name: Set package version
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already published — nothing to do."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          elif git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "::error::Tag v$version exists but $name@$version is not published. Resolve by hand."
+            exit 1
+          elif ! node scripts/npm-versions.mjs check "$version"; then
+            # npm view reports an unpublished version as missing, but npm publish refuses it.
+            echo "::error::$name@$version was published before and later unpublished; npm never accepts it again. Raise the version."
+            exit 1
+          else
+            echo "$name@$version is new — releasing."
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The same gate as CI. Nothing below runs when the version is unchanged.
+      - if: steps.version.outputs.release == 'true'
+        run: bun install --frozen-lockfile
+      - if: steps.version.outputs.release == 'true'
+        run: bun run verify
+
+      - if: steps.version.outputs.release == 'false'
+        name: report that there is nothing to release
         env:
-          VERSION: ${{ steps.version.outputs.tag }}
-        run: npm version "${VERSION#v}" --no-git-tag-version --allow-same-version
+          VERSION: ${{ steps.version.outputs.version }}
+          WAITING: ${{ steps.version.outputs.waiting }}
+        run: |
+          {
+            echo "## Nothing to release"
+            echo
+            if [ "$WAITING" = "true" ]; then
+              echo "\`$VERSION\` waits for @qeet-id/node and @qeet-id/react to be on npm."
+            else
+              echo "\`$VERSION\` is already on the registry."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - run: bun run typecheck
-      - run: bun run check
-      - run: bun run test
-      - run: bun run build
-      - run: bun run check:package
+  publish:
+    needs: gate
+    if: needs.gate.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm-publish
+    permissions:
+      contents: write # push the version tag and create the release
+      id-token: write # npm provenance, and trusted publishing once it is configured
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24 # npm 11, required for trusted publishing
+          registry-url: https://registry.npmjs.org
+          scope: "@qeet-id"
 
-      - name: Publish to npm
-        run: npm publish --access public --provenance
+      - run: bun install --frozen-lockfile && bun run build
+
+      # `npm publish`, not `bun publish`: bun supports neither OIDC nor provenance. The first
+      # publish uses the organisation's NPM_TOKEN; once npm's trusted publisher is configured for
+      # this repository, workflow release.yml and environment npm-publish, npm prefers the OIDC
+      # identity. Provenance needs a public repository.
+      - name: publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          if [ "$PRIVATE" = "false" ]; then
+            npm publish --access public --provenance
+          else
+            npm publish --access public
+          fi
 
-      # Commit + tag AFTER a successful publish so every tag == a version that
-      # is actually live on npm. This push uses GITHUB_TOKEN, which by design
-      # does not re-trigger workflows — so it cannot loop back into this job.
-      - name: Commit version bump, tag and create GitHub release
+      # Tag AFTER a successful publish, so every tag is a version that shipped.
+      - name: tag the release and open a GitHub Release
         env:
-          VERSION: ${{ steps.version.outputs.tag }}
+          TAG: v${{ needs.gate.outputs.version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git commit -m "chore(release): $VERSION [skip ci]"
-          git tag "$VERSION"
-          git push origin HEAD:main --follow-tags
-          gh release create "$VERSION" \
-            --title "$VERSION" \
-            --generate-notes \
-            --repo "${{ github.repository }}"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" --title "$TAG" --generate-notes --repo "${{ github.repository }}"

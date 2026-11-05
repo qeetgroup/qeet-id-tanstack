@@ -57,11 +57,19 @@ wrong issuer, wrong nonce, cross-site). A change to the cookie format or names s
 ```text
 1  CHANGELOG.md: move [Unreleased] under the version being released
 2  bun run verify
-3  merge develop into main (pull request), which publishes nothing
-4  run release.yml on main by hand, choosing patch, minor or major: it takes the latest vX.Y.Z
-   tag, bumps it, writes it into package.json, runs the gate, publishes to npm with provenance,
-   then commits the bump and tags it
+3  open a pull request from develop into main: version.yml bumps the patch in package.json on the
+   PR branch (to release a minor or major, set the version in package.json yourself)
+4  merge it: release.yml sees a version npm does not have, runs the gate, publishes to npm with
+   provenance, then tags vX.Y.Z and opens a GitHub Release
 ```
+
+A push to `main` whose version is already on npm releases nothing, so re-running is safe. A bad release
+is not unpublished: run `rollback.yml` to point `latest` back at a good version, then release a fix.
+`scripts/npm-versions.mjs` knows every version npm has ever accepted, including unpublished ones, so a
+version number is never reused.
+
+While `package.json` still links `@qeet-id/node` and `@qeet-id/react` (`"link:@qeet-id/…"`),
+`release.yml` waits and publishes nothing: point them at their published versions first.
 
 `VERSION` is written in from package.json at build time.
 

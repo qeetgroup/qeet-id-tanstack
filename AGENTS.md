@@ -93,14 +93,16 @@ and remove the matching steps from the workflows.
 
 `ci.yml` on Node.js 22, 24 and 26: install, typecheck, build, tests with coverage, package checks.
 `lint.yml`: `bun run check`. `security.yml`: `bun audit --audit-level=high` and gitleaks. `codeql.yml`.
-`release.yml`: run by hand on `main` (patch, minor or major); publishes to npm with provenance and tags the
-version. Merging into `main` never publishes.
+`version.yml` bumps the patch in `package.json` on every pull request into `main` (raise minor or major by
+hand). `release.yml` runs on every push to `main`: when that version is not on npm yet, it runs the gate,
+publishes with provenance, then tags `vX.Y.Z` and opens a GitHub Release; otherwise it does nothing.
+`rollback.yml` points the npm `latest` dist-tag back at an earlier version.
 
 ## Branches
 
 Two long-lived branches: `develop`, where work lands, and `main`, what is released. Changes reach `main`
-only by a pull request from `develop`. There are no release branches: a version is a `vX.Y.Z` tag, made when
-`release.yml` is run on `main`.
+only by a pull request from `develop`. There are no release branches: a version is a `vX.Y.Z` tag, made by
+`release.yml` when a pull request is merged into `main`.
 
 ## Before you finish
 

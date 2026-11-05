@@ -68,9 +68,9 @@ commands:
   test:    bun run test
 
 ci:
-  workflows: [ci.yml, codeql.yml, lint.yml, release.yml, security.yml]
+  workflows: [ci.yml, codeql.yml, lint.yml, release.yml, rollback.yml, security.yml, version.yml]
   matrix: ["22", "24", "26"]
-  release: run by hand on main (patch|minor|major) -> bump package.json -> gate -> npm publish --provenance -> tag vX.Y.Z
+  release: PR into main -> version.yml bumps the package.json patch; push main -> wait while linked -> version not on npm -> gate -> npm publish --provenance -> tag vX.Y.Z + GitHub release
 
 security:
   sensitive_paths:
