@@ -13,17 +13,18 @@ export const ISSUER = "qeet-id";
 export const CLIENT_ID = "app_brightleaf_console";
 export const CLIENT_SECRET = "cs_test_brightleaf_console_secret";
 export const ORIGIN = "https://app.brightleaffoods.in";
-export const REDIRECT_URI = `${ORIGIN}/auth/callback`;
+export const REDIRECT_URI: string = `${ORIGIN}/auth/callback`;
 export const API_KEY = "qk_test_brightleaf";
 
-export const PERSON = Object.freeze({
-  sub: "0b9a2c7e-5d41-4f1e-9a3b-6c2d8e7f1a90",
-  tenant_id: "5f0c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f",
-  email: "meera@brightleaffoods.in",
-  email_verified: true,
-  name: "Meera Iyer",
-  picture: "https://cdn.brightleaffoods.in/people/meera.png",
-});
+export const PERSON: Readonly<Record<"sub" | "tenant_id" | "email" | "name" | "picture", string> & { email_verified: boolean }> =
+  Object.freeze({
+    sub: "0b9a2c7e-5d41-4f1e-9a3b-6c2d8e7f1a90",
+    tenant_id: "5f0c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f",
+    email: "meera@brightleaffoods.in",
+    email_verified: true,
+    name: "Meera Iyer",
+    picture: "https://cdn.brightleaffoods.in/people/meera.png",
+  });
 
 export interface RecordedCall {
   method: string;
@@ -32,14 +33,14 @@ export interface RecordedCall {
   headers: Headers;
 }
 
-interface Authorization {
+export interface Authorization {
   challenge: string;
   nonce: string;
   redirectUri: string;
   used: boolean;
 }
 
-interface RefreshGrant {
+export interface RefreshGrant {
   used: boolean;
   revoked: boolean;
 }
@@ -51,9 +52,48 @@ export interface MockQeetIdOptions {
   refreshTokens?: boolean;
 }
 
-export type MockQeetId = Awaited<ReturnType<typeof createMockQeetId>>;
+/** What a test can change about the stand-in. */
+export interface MockQeetIdState {
+  accessTtl: number;
+  refreshTokens: boolean;
+  /** Every request fails as if the network were down. */
+  down: boolean;
+  /** The token endpoint answers this OAuth error. */
+  tokenError: string | undefined;
+  /** The token endpoint answers 503. */
+  tokenUnavailable: boolean;
+  /** The management API answers 503. */
+  managementUnavailable: boolean;
+  /** Holds token-endpoint answers until it settles, to test concurrency. */
+  tokenGate: Promise<void> | undefined;
+  /** Overrides the ID token's claims. */
+  idTokenClaims: Record<string, unknown>;
+  /** Signs the next ID tokens with another key. */
+  wrongKey: CryptoKeyPair | undefined;
+  /** Added to the discovery document. */
+  discovery: Record<string, unknown>;
+  organizationName: string;
+  permissions: string[];
+  grants: Array<Record<string, unknown>>;
+  allowed: boolean;
+}
 
-export async function createMockQeetId(options: MockQeetIdOptions = {}) {
+export interface MockQeetId {
+  fetch: typeof fetch;
+  state: MockQeetIdState;
+  calls: RecordedCall[];
+  grants: Map<string, RefreshGrant>;
+  signJwt(claims: Record<string, unknown>, signingKeys?: CryptoKeyPair): Promise<string>;
+  idToken(nonce?: string): Promise<string>;
+  /** Changes who signs in from now on. */
+  setPerson(next: Record<string, unknown>): void;
+  /** What Qeet ID's authorize endpoint does for a signed-in person who has consented: the callback URL. */
+  authorize(authorizationUrl: string): string;
+  /** Calls to `path`, in order. */
+  callsTo(path: string): RecordedCall[];
+}
+
+export async function createMockQeetId(options: MockQeetIdOptions = {}): Promise<MockQeetId> {
   const keys = (await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"])) as CryptoKeyPair;
   const publicJwk = await crypto.subtle.exportKey("jwk", keys.publicKey);
   const kid = "test-signing-key";
@@ -64,31 +104,24 @@ export async function createMockQeetId(options: MockQeetIdOptions = {}) {
   let codeCounter = 0;
   let refreshCounter = 0;
 
-  const state = {
+  const state: MockQeetIdState = {
     accessTtl: options.accessTtl ?? 600,
     refreshTokens: options.refreshTokens ?? true,
-    /** Every request fails as if the network were down. */
     down: false,
-    /** The token endpoint answers this OAuth error. */
-    tokenError: undefined as string | undefined,
-    /** The token endpoint answers 503. */
+    tokenError: undefined,
     tokenUnavailable: false,
-    /** The management API answers 503. */
     managementUnavailable: false,
-    /** Holds token-endpoint answers until released, to test concurrency. */
-    tokenGate: undefined as Promise<void> | undefined,
-    /** Overrides the ID token's claims. */
-    idTokenClaims: {} as Record<string, unknown>,
-    /** Signs the next ID tokens with another key. */
-    wrongKey: undefined as CryptoKeyPair | undefined,
-    discovery: {} as Record<string, unknown>,
+    tokenGate: undefined,
+    idTokenClaims: {},
+    wrongKey: undefined,
+    discovery: {},
     organizationName: "Brightleaf Foods",
     permissions: ["invoice.approve", "invoice.read"],
     grants: [
       { permission: "invoice.approve", granted_by: "role", via: "direct", role_id: "r1", role_name: "Finance approver" },
       { permission: "invoice.read", granted_by: "role", via: "direct", role_id: "r1", role_name: "Finance approver" },
       { permission: "invoice.read", granted_by: "role", via: "group:finance", role_id: "r2", role_name: "Viewer" },
-    ] as Array<Record<string, unknown>>,
+    ],
     allowed: true,
   };
 
@@ -242,15 +275,10 @@ export async function createMockQeetId(options: MockQeetIdOptions = {}) {
     grants,
     signJwt,
     idToken,
-    /** Changes who signs in from now on. */
-    setPerson(next: Record<string, unknown>) {
+    setPerson(next) {
       person = { ...next };
     },
-    /**
-     * What Qeet ID's authorize endpoint does for a signed-in person who has
-     * consented: checks the request and answers with the callback URL.
-     */
-    authorize(authorizationUrl: string): string {
+    authorize(authorizationUrl) {
       const url = new URL(authorizationUrl);
       const params = url.searchParams;
       if (`${url.origin}${url.pathname}` !== `${BASE_URL}/v1/oauth/authorize`) throw new Error(`Not the authorize endpoint: ${url}`);
@@ -269,8 +297,7 @@ export async function createMockQeetId(options: MockQeetIdOptions = {}) {
       callback.searchParams.set("iss", ISSUER);
       return callback.toString();
     },
-    /** Calls to `path`, in order. */
-    callsTo(path: string): RecordedCall[] {
+    callsTo(path) {
       return calls.filter((call) => call.path === path);
     },
   };
@@ -278,7 +305,7 @@ export async function createMockQeetId(options: MockQeetIdOptions = {}) {
 
 /** A browser's cookie jar, enough for these tests: name=value, Max-Age=0 deletes. */
 export class CookieJar {
-  readonly cookies = new Map<string, string>();
+  readonly cookies: Map<string, string> = new Map();
   /** Every Set-Cookie value seen, for checking attributes. */
   readonly setCookies: string[] = [];
 
