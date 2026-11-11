@@ -47,7 +47,7 @@
 | Compiler config | `tsconfig.json` — `nodenext`, strict, `isolatedDeclarations` |
 | Tests | `test/` — vitest |
 | **Mock Qeet ID and cookie jar** | `test/helpers/qeet-id.ts` |
-| CI | `.github/workflows/{ci,lint,security,codeql,release}.yml` |
+| CI (Verify) and release | `.github/workflows/{ci,release}.yml` |
 
 ## Decisions
 

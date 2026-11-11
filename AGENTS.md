@@ -74,12 +74,12 @@ Also `bun run dev`, `bun run test:watch`, `bun run test:coverage`, `bun run lint
 
 ## What CI enforces
 
-`ci.yml` on Node.js 22, 24 and 26: install, typecheck, build, tests with coverage, package checks.
-`lint.yml`: `bun run check`. `security.yml`: `bun audit --audit-level=high` and gitleaks. `codeql.yml`.
-`version.yml` bumps the patch in `package.json` on every pull request into `main` (raise minor or major by
-hand). `release.yml` runs on every push to `main`: when that version is not on npm yet, it runs the gate,
-publishes with provenance, then tags `vX.Y.Z` and opens a GitHub Release; otherwise it does nothing.
-`rollback.yml` points the npm `latest` dist-tag back at an earlier version.
+`ci.yml`, **Verify**, on pull requests into `develop` and `main`: install, typecheck, `bun run check` (Biome),
+`bun audit --audit-level=high` and gitleaks over the pull request's commits. The build, the tests with coverage and the
+package checks run locally before every push (`bun run verify`). `release.yml` runs on every push to `main`: when the
+version in `package.json` is not on npm yet, it publishes with provenance, then tags `vX.Y.Z` and opens a GitHub
+Release; otherwise it does nothing. Raise the version by hand in the pull request into `main`. Dependabot proposes
+updates monthly into `develop`.
 
 ## Branches
 

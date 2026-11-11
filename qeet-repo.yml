@@ -68,9 +68,9 @@ commands:
   test:    bun run test
 
 ci:
-  workflows: [ci.yml, codeql.yml, lint.yml, release.yml, rollback.yml, security.yml, version.yml]
-  matrix: ["22", "24", "26"]
-  release: PR into main -> version.yml bumps the package.json patch; push main -> version not on npm -> gate -> npm publish --provenance -> tag vX.Y.Z + GitHub release
+  workflows: [ci.yml, release.yml]
+  verify: "ci.yml Verify on PRs into develop and main: typecheck, biome check, bun audit, gitleaks; build, tests and package checks run locally (bun run verify)"
+  release: PR develop -> main raises the package.json version by hand; push main -> version not on npm -> npm publish --provenance -> tag vX.Y.Z + GitHub release
 
 security:
   sensitive_paths:
