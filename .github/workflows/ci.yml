@@ -1,40 +1,60 @@
-name: CI
+name: ci
 
+# Verify, on pull requests into develop and main: it compiles (typecheck), is formatted and linted (Biome), has no known
+# high or critical advisory in its dependencies (bun audit), and the pull request adds no secret (gitleaks). The build,
+# the tests with coverage and the package checks run locally before every push (`bun run verify`, AGENTS.md).
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches: [develop, main]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-jobs:
-  test:
-    name: Test (Node ${{ matrix.node }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # Every supported Node.js line (package.json requires >=22.12). The tests
-        # run on Node, not bun: Node is what TanStack Start apps run on.
-        node: ["22", "24", "26"]
-    steps:
-      - uses: actions/checkout@v7
+permissions:
+  contents: read
 
-      - uses: oven-sh/setup-bun@v2
+jobs:
+  verify:
+    name: Verify
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the pull request's commits, for the secret scan
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: ${{ matrix.node }}
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
-      - run: bun install --frozen-lockfile
-      - run: bun run typecheck
-      - run: bun run build
-      - run: bun run test:coverage
-      # The published package's exports and types.
-      - run: bun run check:package
+      - name: Compile (typecheck)
+        run: bun run typecheck
+
+      # Biome: formatting and lint.
+      - name: Format and lint
+        run: bun run check
+
+      # Known high and critical advisories in the installed dependencies.
+      - name: Dependency audit
+        run: bun audit --audit-level=high
+
+      # The free gitleaks CLI (the gitleaks Action needs a paid licence for an organisation), pinned and checksum-verified,
+      # over this pull request's commits.
+      - name: Secret scan
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          (cd "$RUNNER_TEMP" && echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check --strict && tar -xzf "$archive" gitleaks)
+          "$RUNNER_TEMP/gitleaks" git --redact --exit-code 1 --log-opts="$BASE_SHA..$HEAD_SHA" .

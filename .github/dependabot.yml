@@ -1,0 +1,29 @@
+version: 2
+# One grouped pull request a month for each ecosystem, into develop. Each update waits 3 days after its release: a
+# compromised version is usually pulled from npm within that window.
+updates:
+  - package-ecosystem: bun
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      dependencies:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: ci(deps)
+    groups:
+      actions:
+        patterns: ["*"]

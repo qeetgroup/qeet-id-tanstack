@@ -3,11 +3,12 @@ name: Release
 # Publishes @qeet-id/tanstack to npm on merge to main, then tags the commit — the same release flow as the
 # Qeetrix packages.
 #
-#   1. Open a PR into main. version.yml bumps the patch on the PR branch; raise minor or major by hand.
-#   2. Merge to main. The gate job runs every check again.
+#   1. Open a PR from develop into main, raising the version in package.json (patch, minor or major).
+#   2. Merge to main. The gate job checks that version is not on npm yet.
 #   3. The publish job runs in the `npm-publish` environment (give it required reviewers to approve
 #      each release). It publishes to npm, pushes the vX.Y.Z tag and opens a GitHub Release.
-#   4. Bad release? Run rollback.yml: it moves `latest` back. npm never republishes a version.
+#   4. Bad release? Publish a fixed version (npm never republishes one); `npm dist-tag add <pkg>@<good> latest`
+#      moves `latest` back by hand.
 #
 # Re-running is safe: if the version is already on the registry, nothing is published.
 
@@ -75,12 +76,6 @@ jobs:
             echo "$name@$version is new — releasing."
             echo "release=true" >> "$GITHUB_OUTPUT"
           fi
-
-      # The same gate as CI. Nothing below runs when the version is unchanged.
-      - if: steps.version.outputs.release == 'true'
-        run: bun install --frozen-lockfile
-      - if: steps.version.outputs.release == 'true'
-        run: bun run verify
 
       - if: steps.version.outputs.release == 'false'
         name: report that there is nothing to release
