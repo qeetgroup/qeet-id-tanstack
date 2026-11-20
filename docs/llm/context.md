@@ -47,9 +47,9 @@ and no `Secure`. A typical session is about 2.4 KB sealed.
 
 | Fact | Where |
 | --- | --- |
-| Discovery: authorize `/v1/oauth/authorize`, token `/v1/oauth/token-code`, revoke `/oauth/revoke`, end-session `/v1/oauth/logout`, JWKS; `authorization_response_iss_parameter_supported`, S256 only | `internal/federation/oidc/discovery.go` |
+| Discovery: authorize `/v1/oauth/authorize`, token `/v1/oauth/token`, revoke `/oauth/revoke`, end-session `/v1/oauth/logout`, JWKS; `authorization_response_iss_parameter_supported`, S256 only | `internal/federation/oidc/discovery.go` |
 | PKCE S256 required; `nonce` echoed in the ID token; `iss` on the authorization response | `internal/federation/oidc/http_authorize.go`, `authorize.go` |
-| ID token: ES256, `iss`, `sub`, `aud` = client id, `exp`, `iat`, `tenant_id`, `nonce`, `auth_time`, `sid`, scope claims | `internal/federation/oidc/token.go` (`signIDToken`), `userinfo.go` |
+| ID token: ES256, `iss`, `sub`, `aud` = client id, `exp`, `iat`, `organization_id`, `nonce`, `auth_time`, `sid`, scope claims | `internal/federation/oidc/token.go` (`signIDToken`), `userinfo.go` |
 | Refresh rotates; a spent refresh token revokes the whole grant; a renewed ID token keeps `sid`/`auth_time`, no `nonce` | `internal/federation/oidc/token.go` (`RefreshToken`, `handleRefreshReuse`) |
 | A refresh token comes only with the `refresh_token` grant; with `offline_access` registered, only when granted | `internal/federation/oidc/authorize.go` (`issuesRefreshToken`) |
 | An application's code is always for its own organisation | `internal/federation/oidc/authorize.go` (`AuthorizeInLoginSession`) |

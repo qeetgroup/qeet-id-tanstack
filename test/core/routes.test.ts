@@ -80,7 +80,7 @@ describe("GET {base}/session", () => {
     const response = await call("/auth/session");
     const body = (await response.json()) as { session: unknown };
     expect(parseSession(body.session)).toEqual(body.session);
-    expect(body.session).toMatchObject({ user: { id: PERSON.sub, email: PERSON.email }, organization: { id: PERSON.tenant_id } });
+    expect(body.session).toMatchObject({ user: { id: PERSON.sub, email: PERSON.email }, organization: { id: PERSON.organization_id } });
     expect(JSON.stringify(body)).not.toMatch(/eyJ|rt_/);
   });
 
@@ -166,9 +166,9 @@ describe("POST {base}/switch-organization", () => {
   it("answers the session for the organisation it is already in", async () => {
     const { call, signIn } = await setup();
     await signIn();
-    const response = await call("/auth/switch-organization", { method: "POST", headers: POST_HEADERS, body: body(PERSON.tenant_id) });
+    const response = await call("/auth/switch-organization", { method: "POST", headers: POST_HEADERS, body: body(PERSON.organization_id) });
     expect(response.status).toBe(200);
-    expect(((await response.json()) as { session: { organization: { id: string } } }).session.organization.id).toBe(PERSON.tenant_id);
+    expect(((await response.json()) as { session: { organization: { id: string } } }).session.organization.id).toBe(PERSON.organization_id);
   });
 
   it("answers 501 organization_switch_unavailable for any other: Qeet ID can't switch an application's organisation", async () => {

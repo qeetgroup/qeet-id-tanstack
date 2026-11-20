@@ -74,7 +74,7 @@ describe("reading the session in a request", () => {
       expect(await bodies.readSession()).toBeNull();
     }
     expect(start.headers).toEqual([]);
-    expect(mock.callsTo("/v1/oauth/token-code")).toHaveLength(1);
+    expect(mock.callsTo("/v1/oauth/token")).toHaveLength(1);
     start.request = jar.request("/authors");
     expect((await bodies.readSession())?.user.id).toBe(PERSON.sub);
   });
@@ -156,6 +156,6 @@ describe("the middleware", () => {
     await signIn();
     start.request = jar.request("/api/invoices");
     const signedIn = await run(requireSessionMiddleware, "serverFn");
-    expect(signedIn.next.mock.calls[0]?.[0]?.context).toMatchObject({ session: { organization: { id: PERSON.tenant_id } } });
+    expect(signedIn.next.mock.calls[0]?.[0]?.context).toMatchObject({ session: { organization: { id: PERSON.organization_id } } });
   });
 });

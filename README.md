@@ -289,8 +289,8 @@ Called in the browser, the server-only helpers throw instead of running.
 
 ## 🏢 Organisations
 
-A Qeet ID application belongs to one organisation, and its sign-in is always for that organisation: the session's
-`organization.id` is the ID token's `tenant_id`. With `QEET_ID_API_KEY`, the session also carries the organisation's name
+A Qeet ID application belongs to one organization, and its sign-in is always for that organization: the session's
+`organization.id` is the ID token's `organization_id`. With `QEET_ID_API_KEY`, the session also carries the organization's name
 and the person's role names and permission keys, looked up at sign-in and every five minutes after.
 
 **`roles` and `permissions` are hints for the UI.** Decide what someone may do on the server, with `checkPermission`:

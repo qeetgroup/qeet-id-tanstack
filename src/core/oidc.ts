@@ -28,8 +28,8 @@ export interface IdTokenClaims {
   exp: number;
   iat?: number;
   nonce?: string;
-  /** The organisation (Qeet ID tenant) the sign-in is for: always the application's own. */
-  tenant_id?: string;
+  /** The organization the sign-in is for: always the application's own. */
+  organization_id?: string;
   /** The hosted-login session. */
   sid?: string;
   auth_time?: number;
