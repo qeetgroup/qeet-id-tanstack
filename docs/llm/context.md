@@ -13,7 +13,7 @@ modules only, built by tsdown (one file per module).
 ## Context inheritance
 
 ```text
-qeet-context (L0)  →  qeet-id-context (L1)  →  qeet-id-react (the session contract)
+qeet-context (L0)  →  qeet-id-files (L1)  →  qeet-id-react (the session contract)
                                             →  qeet-id-tanstack (L2 — this document)
 ```
 
