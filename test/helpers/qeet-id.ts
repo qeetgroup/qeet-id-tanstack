@@ -1,6 +1,6 @@
 /**
  * A stand-in for Qeet ID, as a `fetch` function: discovery, JWKS, the
- * token-code endpoint (authorization_code and refresh_token with rotation and
+ * token endpoint (authorization_code and refresh_token with rotation and
  * reuse detection, as the server does), revocation, and the management API
  * lookups. ID tokens are signed with a real ES256 key. Nothing leaves the
  * process.
@@ -16,10 +16,10 @@ export const ORIGIN = "https://app.brightleaffoods.in";
 export const REDIRECT_URI: string = `${ORIGIN}/auth/callback`;
 export const API_KEY = "qk_test_brightleaf";
 
-export const PERSON: Readonly<Record<"sub" | "tenant_id" | "email" | "name" | "picture", string> & { email_verified: boolean }> =
+export const PERSON: Readonly<Record<"sub" | "organization_id" | "email" | "name" | "picture", string> & { email_verified: boolean }> =
   Object.freeze({
     sub: "0b9a2c7e-5d41-4f1e-9a3b-6c2d8e7f1a90",
-    tenant_id: "5f0c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f",
+    organization_id: "5f0c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f",
     email: "meera@brightleaffoods.in",
     email_verified: true,
     name: "Meera Iyer",
@@ -29,6 +29,8 @@ export const PERSON: Readonly<Record<"sub" | "tenant_id" | "email" | "name" | "p
 export interface RecordedCall {
   method: string;
   path: string;
+  /** The query string's parameters. */
+  query: URLSearchParams;
   form?: Record<string, string>;
   headers: Headers;
 }
@@ -157,7 +159,7 @@ export async function createMockQeetId(options: MockQeetIdOptions = {}): Promise
       aud: "qeet-id",
       sub: person.sub,
       user_id: person.sub,
-      tenant_id: person.tenant_id,
+      organization_id: person.organization_id,
       sid: crypto.randomUUID(),
       scope: "openid email profile",
       client_id: CLIENT_ID,
@@ -220,7 +222,7 @@ export async function createMockQeetId(options: MockQeetIdOptions = {}): Promise
   const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const request = new Request(input, init);
     const url = new URL(request.url);
-    const call: RecordedCall = { method: request.method, path: url.pathname, headers: request.headers };
+    const call: RecordedCall = { method: request.method, path: url.pathname, query: url.searchParams, headers: request.headers };
     if ((request.headers.get("content-type") ?? "").startsWith("application/x-www-form-urlencoded")) {
       call.form = Object.fromEntries(new URLSearchParams(await request.text()));
     }
@@ -233,7 +235,7 @@ export async function createMockQeetId(options: MockQeetIdOptions = {}): Promise
       return Response.json({
         issuer: ISSUER,
         authorization_endpoint: `${BASE_URL}/v1/oauth/authorize`,
-        token_endpoint: `${BASE_URL}/v1/oauth/token-code`,
+        token_endpoint: `${BASE_URL}/v1/oauth/token`,
         userinfo_endpoint: `${BASE_URL}/v1/oauth/userinfo`,
         jwks_uri: `${BASE_URL}/.well-known/jwks.json`,
         revocation_endpoint: `${BASE_URL}/oauth/revoke`,
@@ -246,7 +248,7 @@ export async function createMockQeetId(options: MockQeetIdOptions = {}): Promise
     if (request.method === "GET" && url.pathname === "/.well-known/jwks.json") {
       return Response.json({ keys: [{ ...publicJwk, kid, use: "sig", alg: "ES256" }] });
     }
-    if (request.method === "POST" && url.pathname === "/v1/oauth/token-code") return tokenEndpoint(call.form ?? {});
+    if (request.method === "POST" && url.pathname === "/v1/oauth/token") return tokenEndpoint(call.form ?? {});
     if (request.method === "POST" && url.pathname === "/oauth/revoke") {
       const grant = grants.get(call.form?.token ?? "");
       if (grant) grant.revoked = true;
@@ -256,10 +258,10 @@ export async function createMockQeetId(options: MockQeetIdOptions = {}): Promise
       return Response.json({ error: { code: "auth.unauthorized", message: "No API key." } }, { status: 401 });
     }
     if (state.managementUnavailable) return Response.json({ error: { code: "server.unavailable", message: "Down" } }, { status: 503 });
-    if (request.method === "GET" && url.pathname === `/v1/tenants/${person.tenant_id}`) {
-      return Response.json({ id: person.tenant_id, name: state.organizationName, slug: "brightleaf", status: "active" });
+    if (request.method === "GET" && url.pathname === `/v1/organizations/${person.organization_id}`) {
+      return Response.json({ id: person.organization_id, name: state.organizationName, slug: "brightleaf", status: "active" });
     }
-    if (request.method === "GET" && url.pathname === `/v1/users/${person.sub}/tenants/${person.tenant_id}/permissions`) {
+    if (request.method === "GET" && url.pathname === `/v1/users/${person.sub}/organizations/${person.organization_id}/permissions`) {
       return Response.json({ permissions: state.permissions, grants: state.grants });
     }
     if (request.method === "GET" && url.pathname === "/v1/check") {

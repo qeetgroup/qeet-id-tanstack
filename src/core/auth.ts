@@ -257,7 +257,7 @@ export class QeetIDAuth {
     const { session } = await this.loadSession(request);
     if (!session) throw new NotSignedInError();
     if (!session.organization) return false;
-    return this.oidc.api.permissions.check({ user_id: session.user.id, tenant_id: session.organization.id, permission });
+    return this.oidc.api.permissions.check({ user_id: session.user.id, organization_id: session.organization.id, permission });
   }
 
   async #load(request: Request): Promise<LoadedSession> {
@@ -349,13 +349,13 @@ export class QeetIDAuth {
     if (this.config.apiKey === undefined) return stored;
     const checked = { ...stored, directoryCheckedAt: this.#now() };
     const claims = decodeJwtPayload(stored.idToken);
-    const tenantId = claims?.tenant_id;
+    const organizationId = claims?.organization_id;
     const userId = claims?.sub;
-    if (typeof tenantId !== "string" || typeof userId !== "string") return checked;
+    if (typeof organizationId !== "string" || typeof userId !== "string") return checked;
     try {
       const [organization, access] = await Promise.all([
-        this.oidc.api.tenants.get(tenantId),
-        this.oidc.api.permissions.listEffective(tenantId, userId),
+        this.oidc.api.organizations.get(organizationId),
+        this.oidc.api.permissions.listEffective(organizationId, userId),
       ]);
       const roles = access.grants.map((grant) => grant.role_name).filter((name): name is string => typeof name === "string" && name !== "");
       return {

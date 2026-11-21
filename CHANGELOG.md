@@ -6,6 +6,26 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-21
+
+Follows the Qeet ID API's rename of tenant to organization and its single token endpoint, through
+`@qeet-id/node` 0.2.0. The session contract, the routes and the exports are unchanged.
+
+### Changed
+
+- **Peers `@qeet-id/node` and `@qeet-id/react` are `^0.2.0`**: 0.1.0 of the node SDK calls routes and
+  reads a claim the API no longer has.
+- **The session's organization is read from the ID token's `organization_id` claim**, which replaced
+  `tenant_id` (`IdTokenClaims.organization_id`). Its name comes from `organizations.get`
+  (`GET /v1/organizations/{organizationID}`), the roles and permissions from
+  `GET /v1/users/{userID}/organizations/{organizationID}/permissions`, and `checkPermission` sends
+  `organization_id` to `GET /v1/check`.
+- **The session cookie lasts 7 days by default** (`QEET_ID_SESSION_MAX_AGE`, was 30 days), matching
+  Qeet ID's refresh token, which now lasts 7 days unused. Each renewal starts the 7 days again, so people
+  who keep using the application stay signed in.
+- **The code exchange and renewals post to `/v1/oauth/token`**, the API's one token endpoint (they
+  posted to `/v1/oauth/token-code`, which is gone).
+
 ## [0.1.0] — 2026-11-05
 
 ### Added
@@ -48,5 +68,6 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   current one, and `organization` and `loginHint` on sign-in are accepted but not passed on: Qeet ID's
   authorization endpoint takes neither, and an application's sign-in is always for its own organisation.
 
-[Unreleased]: https://github.com/qeetgroup/qeet-id-tanstack/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/qeetgroup/qeet-id-tanstack/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/qeetgroup/qeet-id-tanstack/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/qeetgroup/qeet-id-tanstack/releases/tag/v0.1.0

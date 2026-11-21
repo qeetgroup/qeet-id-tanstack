@@ -65,13 +65,13 @@ export function asSignInTransaction(value: unknown): SignInTransaction | undefin
 
 /**
  * The contract's `Session` for a stored session: the person from the ID
- * token's claims, the organisation from `tenant_id`, and what the management
+ * token's claims, the organization from `organization_id`, and what the management
  * API added. `parseSession` checks the result against the contract.
  */
 export function toSession(stored: StoredSession): Session {
   const claims = decodeJwtPayload(stored.idToken) ?? {};
   const email = typeof claims.email === "string" && claims.email !== "" ? claims.email : null;
-  const tenantId = typeof claims.tenant_id === "string" && claims.tenant_id !== "" ? claims.tenant_id : null;
+  const organizationId = typeof claims.organization_id === "string" && claims.organization_id !== "" ? claims.organization_id : null;
   return parseSession({
     user: {
       id: claims.sub,
@@ -80,7 +80,7 @@ export function toSession(stored: StoredSession): Session {
       name: typeof claims.name === "string" ? claims.name : null,
       picture: typeof claims.picture === "string" ? claims.picture : null,
     },
-    organization: tenantId === null ? null : { id: tenantId, name: stored.organizationName },
+    organization: organizationId === null ? null : { id: organizationId, name: stored.organizationName },
     roles: [...stored.roles],
     permissions: [...stored.permissions],
     expiresAt: new Date(stored.expiresAt).toISOString(),

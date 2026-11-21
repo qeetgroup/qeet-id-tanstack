@@ -110,7 +110,7 @@ In Qeet ID, create a **confidential web application** in your organisation, and 
 | `QEET_ID_BASE_PATH` | | Where the session routes live. Default `/auth` |
 | `QEET_ID_SCOPES` | | Default `openid email profile`. Add `offline_access` if the application lists it among its scopes |
 | `QEET_ID_POST_SIGN_OUT_REDIRECT_URI` | | Where Qeet ID sends people after signing out. Default `{your origin}/` |
-| `QEET_ID_SESSION_MAX_AGE` | | Seconds a session lasts without renewal. Default `2592000` (30 days, Qeet ID's refresh token lifetime) |
+| `QEET_ID_SESSION_MAX_AGE` | | Seconds a session lasts without renewal. Default `604800` (7 days, Qeet ID's refresh token lifetime) |
 | `QEET_ID_API_KEY` | | A server-side API key: fills the session's organisation name, roles and permissions, and enables `checkPermission` |
 
 Plain `http` is accepted for `localhost` only; there the cookies drop `Secure` and the `__Host-` prefix. A missing or
@@ -289,8 +289,8 @@ Called in the browser, the server-only helpers throw instead of running.
 
 ## 🏢 Organisations
 
-A Qeet ID application belongs to one organisation, and its sign-in is always for that organisation: the session's
-`organization.id` is the ID token's `tenant_id`. With `QEET_ID_API_KEY`, the session also carries the organisation's name
+A Qeet ID application belongs to one organization, and its sign-in is always for that organization: the session's
+`organization.id` is the ID token's `organization_id`. With `QEET_ID_API_KEY`, the session also carries the organization's name
 and the person's role names and permission keys, looked up at sign-in and every five minutes after.
 
 **`roles` and `permissions` are hints for the UI.** Decide what someone may do on the server, with `checkPermission`:

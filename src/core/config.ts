@@ -11,8 +11,8 @@ import { ConfigurationError } from "./errors.js";
 export const DEFAULT_BASE_URL: string = "https://api.id.qeet.in";
 /** The scopes asked for unless `QEET_ID_SCOPES` says otherwise: the session's fields come from them. */
 export const DEFAULT_SCOPES: readonly string[] = Object.freeze(["openid", "email", "profile"]);
-/** How long a session lasts without being renewed, unless `QEET_ID_SESSION_MAX_AGE` says otherwise: 30 days, Qeet ID's refresh token lifetime. */
-export const DEFAULT_SESSION_MAX_AGE_SECONDS: number = 30 * 24 * 60 * 60;
+/** How long a session lasts without being renewed, unless `QEET_ID_SESSION_MAX_AGE` says otherwise: 7 days, Qeet ID's refresh token lifetime (7 days unused, restarted at each renewal). */
+export const DEFAULT_SESSION_MAX_AGE_SECONDS: number = 7 * 24 * 60 * 60;
 /** The shortest secret accepted in `QEET_ID_COOKIE_SECRET`. */
 export const MIN_COOKIE_SECRET_LENGTH: number = 32;
 

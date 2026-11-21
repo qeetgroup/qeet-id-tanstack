@@ -5,9 +5,9 @@
 ## Context
 
 The contract has `POST {base}/switch-organization`. At Qeet ID, an application's authorization code, and so
-its ID token's `tenant_id`, is always the application's own organisation; a person who isn't a member is
+its ID token's `organization_id`, is always the application's own organization; a person who isn't a member is
 refused (`internal/federation/oidc/authorize.go`, `AuthorizeInLoginSession`). The authorize endpoint takes
-no organisation parameter. `POST /v1/auth/switch-tenant` exists, but only for a person's own session: an
+no organization parameter. `POST /v1/auth/switch-organization` exists, but only for a person's own session: an
 application's access token is refused everywhere except `/v1/oauth/userinfo`
 (`internal/bootstrap/router.go`, `RefuseApplicationTokens(ApplicationTokenRoutes())`).
 

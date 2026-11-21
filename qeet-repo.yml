@@ -1,5 +1,5 @@
 # qeet-id-tanstack — repository context metadata (Level 2).
-# Inherits qeetgroup/qeet-context (L0) and qeetgroup/qeet-id-context (L1).
+# Inherits qeetgroup/qeet-context (L0) and qeetgroup/qeet-id-files (L1).
 
 schema_version: 1
 
@@ -7,7 +7,7 @@ context: {type: repository, level: L2, canonical: true, last_verified: "2026-11-
 
 inheritance:
   organization: {repository: qeetgroup/qeet-context, level: L0}
-  product:      {repository: qeetgroup/qeet-id-context, level: L1}
+  product:      {repository: qeetgroup/qeet-id-files, level: L1}
 
 repository:
   name: qeet-id-tanstack
@@ -28,7 +28,7 @@ runtime:
   peers: ["@qeet-id/node", "@qeet-id/react", "@tanstack/react-start ^1.169", "@tanstack/react-router ^1.170", "react ^19"]
   build: tsdown              # ES modules only (.mjs/.d.mts), one file per module
 
-module: {name: "@qeet-id/tanstack", version: "0.1.0", entries: ["@qeet-id/tanstack", "@qeet-id/tanstack/server"]}
+module: {name: "@qeet-id/tanstack", version: "0.2.0", entries: ["@qeet-id/tanstack", "@qeet-id/tanstack/server"]}
 
 architecture:
   pattern: backend-for-frontend        # RFC 10017 §6.1
@@ -46,7 +46,7 @@ contracts:
     documents: [docs/session-contract.md, src/contract.ts]
   consumes:
     api: qeet-id-server
-    documents: [api/openapi/federation.yaml, api/openapi/management.yaml, api/openapi/auth.yaml]
+    documents: [api/openapi/federation.yaml, api/openapi/identity.yaml, api/openapi/access.yaml]
     through: "@qeet-id/node"
     base_url: https://api.id.qeet.in
   oauth_client_auth: client_secret_post

@@ -18,7 +18,7 @@ CLAUDE.md  →  AGENTS.md  →  docs/llm/*
 | [docs/llm/workflows.md](docs/llm/workflows.md) | Step-by-step for common changes |
 | [docs/llm/architecture-map.md](docs/llm/architecture-map.md) | "Where is X?" — fastest path to a file |
 
-Parent context: **L0** `qeetgroup/qeet-context` · **L1** `qeetgroup/qeet-id-context`.
+Parent context: **L0** `qeetgroup/qeet-context` · **L1** `qeetgroup/qeet-id-files`.
 
 ## The things most likely to trip you up here
 

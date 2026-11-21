@@ -79,9 +79,9 @@ describe("signing in", () => {
     expect(done.location).toBe("/invoices?status=due#top");
     expect([...jar.cookies.keys()]).toEqual(["__Host-qeet-id-session"]);
     expect(jar.setCookies.at(-2)).toMatch(/^__Host-qeet-id-signin\.[^=]+=; Path=\/; Max-Age=0/);
-    expect(jar.setCookies.at(-1)).toMatch(/^__Host-qeet-id-session=[^;]+; Path=\/; Max-Age=2592000; HttpOnly; SameSite=Lax; Secure$/);
+    expect(jar.setCookies.at(-1)).toMatch(/^__Host-qeet-id-session=[^;]+; Path=\/; Max-Age=604800; HttpOnly; SameSite=Lax; Secure$/);
 
-    const [exchange] = mock.callsTo("/v1/oauth/token-code");
+    const [exchange] = mock.callsTo("/v1/oauth/token");
     expect(exchange?.form).toMatchObject({
       grant_type: "authorization_code",
       client_id: CLIENT_ID,
@@ -93,12 +93,12 @@ describe("signing in", () => {
     const { session, tokens } = await auth.loadSession(jar.request("/"));
     expect(session).toEqual({
       user: { id: PERSON.sub, email: PERSON.email, emailVerified: true, name: PERSON.name, picture: PERSON.picture },
-      organization: { id: PERSON.tenant_id, name: null },
+      organization: { id: PERSON.organization_id, name: null },
       roles: [],
       permissions: [],
       expiresAt: expect.any(String),
     });
-    expect(Date.parse(session!.expiresAt) - Date.now()).toBeGreaterThan(29 * 24 * 60 * MINUTE);
+    expect(Date.parse(session!.expiresAt) - Date.now()).toBeGreaterThan(6 * 24 * 60 * MINUTE);
     expect(tokens?.accessToken).toMatch(/^ey/);
     // The session cookie holds no token in the clear.
     expect(jar.header()).not.toContain(tokens!.accessToken.slice(0, 40));
@@ -106,7 +106,7 @@ describe("signing in", () => {
 
   it("maps missing claims to null, as the contract says", async () => {
     const { mock, jar, signIn, auth } = await setup();
-    mock.setPerson({ sub: PERSON.sub, tenant_id: PERSON.tenant_id });
+    mock.setPerson({ sub: PERSON.sub, organization_id: PERSON.organization_id });
     await signIn();
     const { session } = await auth.loadSession(jar.request("/"));
     expect(session?.user).toEqual({ id: PERSON.sub, email: null, emailVerified: false, name: null, picture: null });
@@ -155,7 +155,7 @@ describe("signing in", () => {
     expect((await auth.finishSignIn(jar.request(forged.toString()))).location).toBe("/?authError=invalid_state");
     forged.searchParams.set("state", "not a state");
     expect((await auth.finishSignIn(jar.request(forged.toString()))).location).toBe("/?authError=invalid_state");
-    expect(mock.callsTo("/v1/oauth/token-code")).toHaveLength(0);
+    expect(mock.callsTo("/v1/oauth/token")).toHaveLength(0);
   });
 
   it("refuses a sign-in that took longer than ten minutes", async () => {
@@ -198,7 +198,7 @@ describe("signing in", () => {
       else callback.searchParams.set("iss", iss);
       expect((await auth.finishSignIn(jar.request(callback.toString()))).location).toBe("/invoices?authError=invalid_state");
     }
-    expect(mock.callsTo("/v1/oauth/token-code")).toHaveLength(0);
+    expect(mock.callsTo("/v1/oauth/token")).toHaveLength(0);
   });
 
   it("refuses an ID token whose nonce isn't this sign-in's", async () => {
@@ -307,7 +307,7 @@ describe("the session", () => {
     const request = jar.request("/");
     const [a, b] = await Promise.all([auth.loadSession(request), auth.loadSession(request)]);
     expect(a).toBe(b);
-    expect(mock.callsTo("/v1/oauth/token-code")).toHaveLength(2);
+    expect(mock.callsTo("/v1/oauth/token")).toHaveLength(2);
   });
 
   it("renews the access token in its last minute, and rolls the session forward", async () => {
@@ -321,7 +321,7 @@ describe("the session", () => {
     expect(renewed.tokens?.accessToken).not.toBe(before.tokens?.accessToken);
     expect(renewed.cookies).toHaveLength(1);
     expect(Date.parse(renewed.session!.expiresAt)).toBeGreaterThan(Date.parse(before.session!.expiresAt));
-    const refresh = mock.callsTo("/v1/oauth/token-code")[1];
+    const refresh = mock.callsTo("/v1/oauth/token")[1];
     expect(refresh?.form).toMatchObject({ grant_type: "refresh_token", client_id: CLIENT_ID, client_secret: CLIENT_SECRET });
     jar.apply(renewed.cookies);
     expect((await auth.loadSession(jar.request("/"))).cookies).toEqual([]);
@@ -342,7 +342,7 @@ describe("the session", () => {
     // A request that left the browser before the new cookie arrived, a little later.
     advance(20 * 1000);
     const late = await auth.loadSession(jar.request("/d"));
-    expect(mock.callsTo("/v1/oauth/token-code")).toHaveLength(2);
+    expect(mock.callsTo("/v1/oauth/token")).toHaveLength(2);
     const tokens = new Set([...results, late].map((result) => result.tokens?.accessToken));
     expect(tokens.size).toBe(1);
     expect([...mock.grants.values()].some((grant) => grant.revoked)).toBe(false);
@@ -403,7 +403,7 @@ describe("the session", () => {
     advance(MINUTE);
     expect((await auth.loadSession(jar.request("/"))).session).toBeNull();
     // The spent refresh token was never sent again.
-    expect(mock.callsTo("/v1/oauth/token-code")).toHaveLength(2);
+    expect(mock.callsTo("/v1/oauth/token")).toHaveLength(2);
   });
 
   it("ends after QEET_ID_SESSION_MAX_AGE without a renewal", async () => {
@@ -447,12 +447,12 @@ describe("the organisation's name, roles and permissions", () => {
     const { auth, jar, signIn, advance, mock } = await setup({ env: { QEET_ID_API_KEY: API_KEY } });
     await signIn();
     const { session } = await auth.loadSession(jar.request("/"));
-    expect(session?.organization).toEqual({ id: PERSON.tenant_id, name: "Brightleaf Foods" });
+    expect(session?.organization).toEqual({ id: PERSON.organization_id, name: "Brightleaf Foods" });
     expect(session?.roles).toEqual(["Finance approver", "Viewer"]);
     expect(session?.permissions).toEqual(["invoice.approve", "invoice.read"]);
-    const lookups = () => mock.callsTo(`/v1/tenants/${PERSON.tenant_id}`).length;
+    const lookups = () => mock.callsTo(`/v1/organizations/${PERSON.organization_id}`).length;
     expect(lookups()).toBe(1);
-    expect(mock.callsTo(`/v1/tenants/${PERSON.tenant_id}`)[0]?.headers.get("authorization")).toBe(`ApiKey ${API_KEY}`);
+    expect(mock.callsTo(`/v1/organizations/${PERSON.organization_id}`)[0]?.headers.get("authorization")).toBe(`ApiKey ${API_KEY}`);
     advance(4 * MINUTE);
     await auth.loadSession(jar.request("/"));
     expect(lookups()).toBe(1);
@@ -480,7 +480,7 @@ describe("the organisation's name, roles and permissions", () => {
     await signIn();
     const { session } = await auth.loadSession(jar.request("/"));
     expect(session?.organization?.name).toBeNull();
-    expect(mock.calls.some((call) => call.path.startsWith("/v1/tenants"))).toBe(false);
+    expect(mock.calls.some((call) => call.path.startsWith("/v1/organizations"))).toBe(false);
   });
 
   it("chunk the cookie when there are many permissions", async () => {
@@ -503,6 +503,9 @@ describe("checkPermission", () => {
     expect(await auth.checkPermission(jar.request("/"), "invoice.delete")).toBe(false);
     const check = new URL(`${BASE_URL}${mock.callsTo("/v1/check")[0]?.path}`);
     expect(check.pathname).toBe("/v1/check");
+    const query = mock.callsTo("/v1/check")[0]?.query;
+    expect(query?.get("organization_id")).toBe(PERSON.organization_id);
+    expect(query?.get("user_id")).toBe(PERSON.sub);
   });
 
   it("needs an API key and a session", async () => {

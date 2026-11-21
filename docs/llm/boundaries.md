@@ -24,9 +24,9 @@ switch an application's organisation (ADR-0004); a missing server feature is ser
 
 ## Consumes
 
-Qeet ID over HTTPS through `@qeet-id/node`: discovery, JWKS, `/v1/oauth/token-code` (authorization_code,
-refresh_token), `/oauth/revoke`; with `QEET_ID_API_KEY`, `/v1/tenants/{id}`,
-`/v1/users/{id}/tenants/{id}/permissions` and `/v1/check`. The browser reaches Qeet ID only by navigating to
+Qeet ID over HTTPS through `@qeet-id/node`: discovery, JWKS, `/v1/oauth/token` (authorization_code,
+refresh_token), `/oauth/revoke`; with `QEET_ID_API_KEY`, `/v1/organizations/{id}`,
+`/v1/users/{id}/organizations/{id}/permissions` and `/v1/check`. The browser reaches Qeet ID only by navigating to
 the authorization and end-session endpoints.
 
 ## Provides
