@@ -37,7 +37,7 @@ browser ──POST /auth/sign-out──▶ revoke refresh token, clear cookie, {
 
 | Cookie | Holds | Life |
 | --- | --- | --- |
-| `__Host-qeet-id-session` (chunked `.0`, `.1`, … when long) | ID, access and refresh tokens; organisation name, roles, permissions; expiries | `QEET_ID_SESSION_MAX_AGE` (30 days), rolling at each renewal; the access token's life without a refresh token |
+| `__Host-qeet-id-session` (chunked `.0`, `.1`, … when long) | ID, access and refresh tokens; organisation name, roles, permissions; expiries | `QEET_ID_SESSION_MAX_AGE` (7 days), rolling at each renewal; the access token's life without a refresh token |
 | `__Host-qeet-id-signin.<state>` | state, nonce, PKCE verifier, return path | 10 minutes, deleted at the callback |
 
 Sealed as JWE `dir`/`A256GCM`; keys by HKDF per secret and purpose. Without https (localhost), no `__Host-`
@@ -55,7 +55,7 @@ and no `Secure`. A typical session is about 2.4 KB sealed.
 | An application's code is always for its own organisation | `internal/federation/oidc/authorize.go` (`AuthorizeInLoginSession`) |
 | Application tokens are refused everywhere but userinfo | `internal/bootstrap/router.go` (`RefuseApplicationTokens`), `permissions.go` (`ApplicationTokenRoutes`) |
 | Logout needs `id_token_hint` (or a confirmation); an unregistered `post_logout_redirect_uri` lands on the hosted signed-out page | `internal/federation/oidc/logout.go` (`endSession`) |
-| Access tokens 10 minutes, refresh tokens 720 hours by default | `internal/platform/config/config.go` |
+| Access tokens 10 minutes, refresh tokens 168 hours (7 days) unused by default, restarted at each renewal | `internal/platform/config/config.go` |
 
 ## Testing
 

@@ -110,7 +110,7 @@ In Qeet ID, create a **confidential web application** in your organisation, and 
 | `QEET_ID_BASE_PATH` | | Where the session routes live. Default `/auth` |
 | `QEET_ID_SCOPES` | | Default `openid email profile`. Add `offline_access` if the application lists it among its scopes |
 | `QEET_ID_POST_SIGN_OUT_REDIRECT_URI` | | Where Qeet ID sends people after signing out. Default `{your origin}/` |
-| `QEET_ID_SESSION_MAX_AGE` | | Seconds a session lasts without renewal. Default `2592000` (30 days, Qeet ID's refresh token lifetime) |
+| `QEET_ID_SESSION_MAX_AGE` | | Seconds a session lasts without renewal. Default `604800` (7 days, Qeet ID's refresh token lifetime) |
 | `QEET_ID_API_KEY` | | A server-side API key: fills the session's organisation name, roles and permissions, and enables `checkPermission` |
 
 Plain `http` is accepted for `localhost` only; there the cookies drop `Secure` and the `__Host-` prefix. A missing or

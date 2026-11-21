@@ -79,7 +79,7 @@ describe("signing in", () => {
     expect(done.location).toBe("/invoices?status=due#top");
     expect([...jar.cookies.keys()]).toEqual(["__Host-qeet-id-session"]);
     expect(jar.setCookies.at(-2)).toMatch(/^__Host-qeet-id-signin\.[^=]+=; Path=\/; Max-Age=0/);
-    expect(jar.setCookies.at(-1)).toMatch(/^__Host-qeet-id-session=[^;]+; Path=\/; Max-Age=2592000; HttpOnly; SameSite=Lax; Secure$/);
+    expect(jar.setCookies.at(-1)).toMatch(/^__Host-qeet-id-session=[^;]+; Path=\/; Max-Age=604800; HttpOnly; SameSite=Lax; Secure$/);
 
     const [exchange] = mock.callsTo("/v1/oauth/token");
     expect(exchange?.form).toMatchObject({
@@ -98,7 +98,7 @@ describe("signing in", () => {
       permissions: [],
       expiresAt: expect.any(String),
     });
-    expect(Date.parse(session!.expiresAt) - Date.now()).toBeGreaterThan(29 * 24 * 60 * MINUTE);
+    expect(Date.parse(session!.expiresAt) - Date.now()).toBeGreaterThan(6 * 24 * 60 * MINUTE);
     expect(tokens?.accessToken).toMatch(/^ey/);
     // The session cookie holds no token in the clear.
     expect(jar.header()).not.toContain(tokens!.accessToken.slice(0, 40));

@@ -20,6 +20,9 @@ Follows the Qeet ID API's rename of tenant to organization and its single token 
   (`GET /v1/organizations/{organizationID}`), the roles and permissions from
   `GET /v1/users/{userID}/organizations/{organizationID}/permissions`, and `checkPermission` sends
   `organization_id` to `GET /v1/check`.
+- **The session cookie lasts 7 days by default** (`QEET_ID_SESSION_MAX_AGE`, was 30 days), matching
+  Qeet ID's refresh token, which now lasts 7 days unused. Each renewal starts the 7 days again, so people
+  who keep using the application stay signed in.
 - **The code exchange and renewals post to `/v1/oauth/token`**, the API's one token endpoint (they
   posted to `/v1/oauth/token-code`, which is gone).
 
